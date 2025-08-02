@@ -1,12 +1,23 @@
 from utilities import utils
 
-@dlt.table(comment="Average telematics")
+catalog = 'smart_claims_dev_new'
+bronze_schema = '01_bronze'
+silver_schema = '02_silver'
+
+# --- CLEAN TELEMATICS ---
+@dlt.table(
+    comment="Average telematics",
+    name = f'{catalog}.{silver_schema}.telematics'
+
+    )
 def telematics():
-  return (dlt.read('raw_telematics').groupBy("chassis_no").agg(
+  return (dlt.read(f'{catalog}.{bronze_schema}.raw_telematics').groupBy("chassis_no").agg(
                 F.avg("speed").alias("telematics_speed"),
                 F.avg("latitude").alias("telematics_latitude"),
                 F.avg("longitude").alias("telematics_longitude")))
                 
+
+# --- CLEAN POLICY ---
 @dlt.table
 @dlt.expect_all({"valid_policy_number": "policy_no IS NOT NULL"})
 def policy():
@@ -20,6 +31,7 @@ def policy():
                 .withColumn("address", concat(col("BOROUGH"), lit(", "), col("ZIP_CODE").cast("string")))
                 .drop('_rescued_data'))
 
+# --- CLEAN CLAIM ---
 @dlt.table
 @dlt.expect_all({"valid_claim_number": "claim_no IS NOT NULL"})
 def claim():
@@ -32,3 +44,7 @@ def claim():
                  .withColumn("incident_date", F.to_date(F.col("incident_date"), "yyyy-MM-dd"))
                  .withColumn("driver_license_issue_date", F.to_date(F.col("driver_license_issue_date"), "dd-MM-yyyy"))
                  .drop('_rescued_data'))
+    
+# --- CLEAN CUSTOMER ---
+
+
